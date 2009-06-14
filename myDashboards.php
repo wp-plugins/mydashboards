@@ -3,12 +3,46 @@
 Plugin Name: My Dashboards
 Plugin URI: http://www.vjcatkick.com/?page_id=10392
 Description: Display my dashboards below Dashboard menu at your administration panel.
-Version: 0.1.0
+Version: 0.1.1
 Author: V.J.Catkick
 Author URI: http://www.vjcatkick.com/
 */
 
 add_action('admin_menu', 'my_dashboards_add_pages');
+
+function add_submenu_page_url( $parent, $page_title, $menu_title, $access_level, $file, $function = '' ) {
+	global $submenu;
+	global $menu;
+	global $_wp_real_parent_file;
+	global $_wp_submenu_nopriv;
+
+//	$file = plugin_basename( $file );
+
+	$parent = plugin_basename( $parent);
+	if ( isset( $_wp_real_parent_file[$parent] ) )
+		$parent = $_wp_real_parent_file[$parent];
+ 
+ 	if ( !current_user_can( $access_level ) ) {
+		$_wp_submenu_nopriv[$parent][$file] = true;
+		return false;
+	}
+
+	if (!isset( $submenu[$parent] ) && $file != $parent  ) {
+		foreach ( (array)$menu as $parent_menu ) {
+			if ( $parent_menu[2] == $parent && current_user_can( $parent_menu[1] ) )
+				$submenu[$parent][] = $parent_menu;
+		}
+	}
+
+	$submenu[$parent][] = array ( $menu_title, $access_level, $file, $page_title );
+
+	$hookname = get_plugin_page_hookname( $file, $parent);
+	if (!empty ( $function ) && !empty ( $hookname ))
+		add_action( $hookname, $function );
+
+	return $hookname;
+}
+
 
 
 function my_dashboards_add_pages() {
@@ -22,9 +56,9 @@ function my_dashboards_add_pages() {
 
 	for( $i=1; $i<=$my_dashboards_max_links; $i++) {
 		$widget_mydashboards_blogtitle_tmp = $options['widget_mydashboards_blogtitle_'.$i];
-		$widget_mydashboards_url_tmp = $options['widget_mydashboards_url_'.$i];
+		$widget_mydashboards_url_tmp = urldecode( $options['widget_mydashboards_url_'.$i] );
 		if( strlen( $widget_mydashboards_blogtitle_tmp ) > 0 && strlen( $widget_mydashboards_url_tmp ) > 0 ) {
-			add_submenu_page('index.php', $widget_mydashboards_blogtitle_tmp, '&#187;&nbsp;'.$widget_mydashboards_blogtitle_tmp, 8, $widget_mydashboards_url_tmp.$admin_url );
+			add_submenu_page_url('index.php', $widget_mydashboards_blogtitle_tmp, '&#187;&nbsp;'.$widget_mydashboards_blogtitle_tmp, 8, $widget_mydashboards_url_tmp.$admin_url );
 		} /* if */
 	} /* for */
 
@@ -39,7 +73,7 @@ function my_dashboards_options_page() {
 	if ( $_POST["widget_mydashboards_submit"] ) {
 		for( $i=1; $i<=$my_dashboards_max_links; $i++) {
 			$newoptions['widget_mydashboards_blogtitle_'.$i] = $_POST["widget_mydashboards_blogtitle_".$i];
-			$newoptions['widget_mydashboards_url_'.$i] = $_POST["widget_mydashboards_url_".$i];
+			$newoptions['widget_mydashboards_url_'.$i] = urlencode( $_POST["widget_mydashboards_url_".$i] );
 		} /* for */
 		$newoptions['widget_mydashboards_add_admin'] = (boolean)$_POST["widget_mydashboards_add_admin"];
 	}
@@ -54,7 +88,7 @@ function my_dashboards_options_page() {
 	$output .= '<form action="" method="post" id="widget_mydashboards_form" style="margin: auto; width: 600px; ">';
 	for( $i=1;$i<=$my_dashboards_max_links;$i++ ) {
 		$widget_mydashboards_blogtitle_tmp = $options['widget_mydashboards_blogtitle_'.$i];
-		$widget_mydashboards_url_tmp = $options['widget_mydashboards_url_'.$i];
+		$widget_mydashboards_url_tmp = urldecode( $options['widget_mydashboards_url_'.$i] );
 	
 		$output .= 'Title '.$i.': ';
 		$output .= '<input style="width: 150px;" id="widget_mydashboards_blogtitle_'.$i.'" name="widget_mydashboards_blogtitle_'.$i.'" type="text" value="'.$widget_mydashboards_blogtitle_tmp.'" /><br />';
